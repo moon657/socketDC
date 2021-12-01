@@ -73,7 +73,7 @@ int main(int argc, char **argv) {
         bzero(recvBuf, BUFFER_SIZE);
 
         cout << "Input a message to the echo server (QUIT for exit): ";
-        //cin.getline(sentcharBuf, BUFFER_SIZE);
+        cin.getline(sentcharBuf, BUFFER_SIZE);
         if (strcmp(sentcharBuf, "QUIT") == 0 || strcmp(sentcharBuf, "quit") == 0) {
             send(connSock, sentcharBuf, strlen(sentcharBuf)+1,0);
             break;
