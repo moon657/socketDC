@@ -73,13 +73,12 @@ void * process(void * ptr)
             }
 
             if(strcmp(buffer, "HELLO") == 0) {
-                write(conn->sock, HELLO.c_str(), HELLO.length());
+                send(conn->sock, HELLO.c_str(), HELLO.length()+1,0);
             }
             else wrongSyntax = true;
             if(wrongSyntax) {
                 memset(buffer,0, BUFFER_SIZE);
-                memcpy(buffer,&packet,sizeof (packet));
-                write(conn->sock, buffer, sizeof (buffer));
+                send(conn->sock,(char*)&packet, sizeof (buffer)+1,0);
             }
         }
 
