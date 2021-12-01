@@ -1,5 +1,6 @@
 # socketDC
 ## compile
+one server n client
 g++ compile them and using parameter -std = c++11
 
 ```
