@@ -13,13 +13,20 @@
 using namespace std;
 
 #define SERVER_PORT 9999
-#define BUFFER_SIZE 1024
+#define BUFFER_SIZE 40960
+typedef struct{
+int cacheID;
+int taskType;
+char key[1024];
+char value[1024];
+}Packet;
 
 int main(int argc, char **argv) {
     char serverAddress[100];
     int  serverPort;
     int    connSock;
     bool startDownload = false;
+	Packet packet;
     struct  sockaddr_in servAddr;
     char sentBuf[BUFFER_SIZE], recvBuf[BUFFER_SIZE];
     int  sentDataLen, recvDataLen;
@@ -62,7 +69,7 @@ int main(int argc, char **argv) {
         cin.getline(sentBuf, BUFFER_SIZE);
 
         
-        if (strcmp(sentBuf,"QUIT") == 0 || strcmp(sentBuf,"quit") == 0){
+        if (strcmp(sentBuf,"QUIT") == 0){
             write(connSock, sentBuf, strlen(sentBuf));
             break;
         }
@@ -78,9 +85,16 @@ int main(int argc, char **argv) {
         if (recvDataLen < 0){
             cout << "Error when receiving data\n";
             break;
-        }
-        if(!startDownload){
-            cout<<"Message received from server: "<<recvBuf<<endl;
+        }else{
+	    memset(&packet,0,sizeof(packet));
+		memcpy(&packet,recvBuf,sizeof(recvBuf));
+
+
+            cout<<"Message received from server: "
+		<<"cacheID:   "<<packet.cacheID<<endl
+		<<"tasktype:  "<<packet.taskType<<endl
+		<<"Key:       "<<packet.key<<endl
+		<<"value:     "<<packet.value<<endl;
         }
     }
     close(connSock);
