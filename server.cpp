@@ -24,61 +24,73 @@ const string KEY_NOT_FOUND = "Key Not Found";
 const string WRONG_SYNTAX = "WRONG SYNTAX";
 const string VALUE = "value";
 
-typedef struct{
-    int cacheID=4;
-    int taskType=3;
+typedef struct {
+    int cacheID = 4;
+    int taskType = 3;
     char key[1024];
     char value[1024];
-}Packet;
-typedef struct
-{
+} Packet;
+typedef struct {
     int sock;
     struct sockaddr address;
     int addr_len;
 } connection_t;
 
 
-void * process(void * ptr)
-{
+void *process(void *ptr) {
     char buffer[BUFFER_SIZE];
     int len;
+    Packet rPacket;
     Packet packet;
-    strcpy(packet.key,KEYTOINSERT.c_str());
-    strcpy(packet.value,VALUE.c_str());
-    connection_t * conn;
+    strcpy(packet.key, KEYTOINSERT.c_str());
+    strcpy(packet.value, VALUE.c_str());
+    connection_t *conn;
 
     if (!ptr) pthread_exit(0);
-    conn = (connection_t *)ptr;
+    conn = (connection_t *) ptr;
 
-    bool  ready = false;
+    bool ready = false;
     bool wrongSyntax = false;
-    while(1) {
+    while (1) {
+        memset(buffer, 0, sizeof buffer);
 
         buffer[BUFFER_SIZE] = 0;
 
         /* read message */
-        len = read(conn->sock, buffer, BUFFER_SIZE-1);
+        len = recv(conn->sock, buffer, BUFFER_SIZE, 0);
 
         buffer[len] = '\0';
 
-        if(len > 0) {
+        if (len > 0) {
             /* print message */
-            cout << "Received a message from the client: "  << buffer << endl;
+            memset(&rPacket, 0, sizeof(rPacket));
+            memcpy(&rPacket, buffer, sizeof buffer);
+            cout << "Received a message from the client: " << endl
+                 << "cache ID: " << rPacket.cacheID << '\n'
+                 << "taskType: " << rPacket.taskType << '\n'
+                 << "Key:      " << rPacket.key << '\n'
+                 << "Value:    " << rPacket.value << endl;
+
 
             // client close connection
-            if (strcmp(buffer,"QUIT") == 0){
+            if (strcmp(buffer, "QUIT") == 0) {
                 close(conn->sock);
-                cout << "Close the connection\n";
+                cout << "Close the connection" << endl;
                 break;
             }
 
-            if(strcmp(buffer, "HELLO") == 0) {
-                send(conn->sock, HELLO.c_str(), HELLO.length()+1,0);
-            }
-            else wrongSyntax = true;
-            if(wrongSyntax) {
+            if (strcmp(buffer, "HELLO") == 0) {
+                send(conn->sock, HELLO.c_str(), HELLO.length() + 1, 0);
+                cerr << "hello sent";
+            } else {
+                packet.taskType++;
+                send(conn->sock, (char *) &packet, sizeof(packet), 0);
+                cout << "sent\n";
+                /*
                 memset(buffer,0, BUFFER_SIZE);
-                send(conn->sock,(char*)&packet, sizeof (buffer)+1,0);
+                memcpy(buffer,&packet,sizeof (packet));
+                write(conn->sock, buffer, sizeof (buffer));
+                */
             }
         }
 
@@ -94,13 +106,12 @@ int main(int argc, char **argv) {
     int sock = -1;
     struct sockaddr_in address;
     int port = 9999;
-    connection_t * connection;
+    connection_t *connection;
     pthread_t thread;
 
     /* create socket */
     sock = socket(AF_INET, SOCK_STREAM, 0);
-    if (sock <= 0)
-    {
+    if (sock <= 0) {
         cout << "error: cannot create socket " << argv[0] << endl;
         return -3;
     }
@@ -109,35 +120,29 @@ int main(int argc, char **argv) {
     address.sin_family = AF_INET;
     address.sin_addr.s_addr = htonl(INADDR_ANY);
     address.sin_port = htons(port);
-    if ((::bind(sock, (struct sockaddr *)&address, sizeof(struct sockaddr_in))) < 0)
-    {
+    if ((::bind(sock, (struct sockaddr *) &address, sizeof(struct sockaddr_in))) < 0) {
         cerr << "ERROR: cannot bind socket to port: " << port << endl;
         return -4;
     }
 
     /* listen on port */
-    if (listen(sock, 5) < 0)
-    {
-        cerr <<  "ERROR: cannot listen on port\n";
+    if (listen(sock, 5) < 0) {
+        cerr << "ERROR: cannot listen on port\n";
         return -5;
     }
 
-    cout << "ready and listening"<<endl;
+    cout << "ready and listening" << endl;
 
-    while (1)
-    {
+    while (1) {
         /* accept incoming connections */
-        connection = (connection_t *)malloc(sizeof(connection_t));
+        connection = (connection_t *) malloc(sizeof(connection_t));
         connection->sock = accept(sock, &connection->address, (socklen_t *) &connection->addr_len);
         cout << "connect to a client" << endl;
-        if (connection->sock <= 0)
-        {
+        if (connection->sock <= 0) {
             free(connection);
-        }
-        else
-        {
+        } else {
             /* start a new thread but do not wait for it */
-            pthread_create(&thread, 0, process, (void *)connection);
+            pthread_create(&thread, 0, process, (void *) connection);
             pthread_detach(thread);
         }
     }
